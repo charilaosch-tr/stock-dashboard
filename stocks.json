@@ -1,0 +1,12 @@
+{
+  "settings": {
+    "renotify_step": 0.5
+  },
+  "stocks": [
+    {
+      "ticker": "SPCX",
+      "name": "SpaceX",
+      "threshold": 0.1
+    }
+  ]
+}

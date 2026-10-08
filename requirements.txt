@@ -1,0 +1,1 @@
+# No third-party dependencies: scripts/check_stocks.py uses only the Python 3 standard library.

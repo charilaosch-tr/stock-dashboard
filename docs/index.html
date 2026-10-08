@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stock Move Tracker</title>
+  <meta name="color-scheme" content="light dark">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>Stock Move Tracker</h1>
+      <p class="sub">Move vs. previous close · alerts when a stock crosses its threshold</p>
+    </div>
+    <div class="meta" id="meta">Loading…</div>
+  </header>
+
+  <main>
+    <section id="alerts" class="alerts" hidden></section>
+    <section id="grid" class="grid" aria-live="polite"></section>
+  </main>
+
+  <footer>
+    Data: Yahoo Finance (delayed), refreshed every 5 min during US market hours by GitHub Actions.
+    Add stocks by editing <code>stocks.json</code>.
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

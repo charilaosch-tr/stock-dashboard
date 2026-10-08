@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-10-08T12:44:27+00:00",
+  "source": "Yahoo Finance",
+  "stocks": [
+    {
+      "ticker": "SPCX",
+      "name": "SpaceX",
+      "threshold": 0.1,
+      "price": 167.6,
+      "previous_close": 171.92,
+      "change": -4.32,
+      "change_pct": -2.5128,
+      "currency": "USD",
+      "exchange": "NasdaqGS",
+      "long_name": "Space Exploration Technologies Corp.",
+      "market_time": 1791403200,
+      "market_time_iso": "2026-10-07T20:00:00+00:00",
+      "market_date": "2026-10-07",
+      "market_state": "pre-market",
+      "fresh": false,
+      "day_high": 171.31,
+      "day_low": 165.66,
+      "session_start": 1791379800,
+      "session_end": 1791403200,
+      "over_threshold": true,
+      "error": null,
+      "stale": true
+    }
+  ]
+}
