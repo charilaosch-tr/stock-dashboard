@@ -2,10 +2,11 @@ name: Stock check
 
 on:
   schedule:
-    # Every 5 minutes, Mon-Fri, 13:00-21:55 UTC. Covers US regular hours in both
-    # EDT (13:30-20:00 UTC) and EST (14:30-21:00 UTC). The script never alerts
-    # on a stale quote, so extra runs outside the session are harmless.
-    - cron: "*/5 13-21 * * 1-5"
+    # Every 5 minutes at :02, :07, :12 ... (off the busy round minutes, which
+    # GitHub delays or drops under load), Mon-Fri, 13:02-21:57 UTC. Covers US
+    # regular hours in both EDT (13:30-20:00 UTC) and EST (14:30-21:00 UTC).
+    # The script never alerts on a stale quote, so extra runs are harmless.
+    - cron: "2-59/5 13-21 * * 1-5"
   workflow_dispatch:
   push:
     # Redeploy right away when you edit the watchlist or the dashboard.
