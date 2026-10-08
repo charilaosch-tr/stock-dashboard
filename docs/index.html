@@ -5,25 +5,70 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Stock Move Tracker</title>
   <meta name="color-scheme" content="light dark">
+  <meta name="description" content="US stock watchlist alerts, market overview, top volume and top movers.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="top">
     <div>
       <h1>Stock Move Tracker</h1>
-      <p class="sub">Move vs. previous close · alerts when a stock crosses its threshold</p>
+      <p class="sub">US markets · watchlist alerts when a stock crosses its threshold</p>
     </div>
-    <div class="meta" id="meta">Loading…</div>
+    <div class="meta-block">
+      <span class="pill" id="mkt-state">…</span>
+      <div class="meta" id="meta">Loading…</div>
+    </div>
   </header>
 
   <main>
+    <section id="market" class="market" aria-label="Market overview"></section>
     <section id="alerts" class="alerts" hidden></section>
-    <section id="grid" class="grid" aria-live="polite"></section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Watchlist</h2>
+        <p class="hint">Edit <code>stocks.json</code> to add tickers</p>
+      </div>
+      <div id="grid" class="grid" aria-live="polite"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Top 20 by volume</h2>
+        <p class="hint">Most actively traded US equities today</p>
+      </div>
+      <div class="table-wrap">
+        <table class="data" id="actives-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="table-note" id="actives-note"></p>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Top 20 movers</h2>
+        <div class="toggles" role="group" aria-label="Movers filter">
+          <button type="button" class="tog active" data-movers="all">All</button>
+          <button type="button" class="tog" data-movers="gainers">Gainers</button>
+          <button type="button" class="tog" data-movers="losers">Losers</button>
+        </div>
+      </div>
+      <p class="hint">Biggest % moves · market cap ≥ $2B · price ≥ $5</p>
+      <div class="table-wrap">
+        <table class="data" id="movers-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="table-note" id="movers-note"></p>
+    </section>
   </main>
 
   <footer>
-    Data: Yahoo Finance (delayed), refreshed every 5 min during US market hours by GitHub Actions.
-    Add stocks by editing <code>stocks.json</code>.
+    Data: Yahoo Finance (delayed). Refreshed every 5 min during US market hours by GitHub Actions.
+    Quotes link to Yahoo Finance. Add stocks by editing <code>stocks.json</code>.
   </footer>
 
   <script src="app.js"></script>

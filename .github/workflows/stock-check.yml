@@ -7,10 +7,15 @@ on:
     # on a stale quote, so extra runs outside the session are harmless.
     - cron: "*/5 13-21 * * 1-5"
   workflow_dispatch:
-
-permissions:
-  contents: write
-  issues: write
+  push:
+    # Redeploy right away when you edit the watchlist or the dashboard.
+    # (Commits made by this workflow with GITHUB_TOKEN never re-trigger it.)
+    branches: [main]
+    paths:
+      - stocks.json
+      - docs/**
+      - scripts/**
+      - .github/workflows/stock-check.yml
 
 concurrency:
   group: stock-check
@@ -20,6 +25,11 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write
+    outputs:
+      uploaded: ${{ steps.upload.outcome == 'success' }}
     steps:
       - name: Check out
         uses: actions/checkout@v4
@@ -29,26 +39,29 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Fetch prices
+      # Rolling intraday history + last snapshot live in the Actions cache,
+      # not in git, so the repo doesn't get a commit every 5 minutes.
+      - name: Restore data cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            docs/data/history.json
+            docs/data/latest.json
+          key: stock-data-${{ github.run_id }}
+          restore-keys: stock-data-
+
+      - name: Fetch prices, market overview & screeners
         id: check
         run: python scripts/check_stocks.py
 
-      - name: Commit updated data
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/data
-          if git diff --cached --quiet; then
-            echo "No data changes."
-            exit 0
-          fi
-          git commit -m "Update stock data $(date -u +'%Y-%m-%d %H:%M UTC')"
-          for i in 1 2 3; do
-            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push && exit 0
-            sleep $((i * 5))
-          done
-          echo "::error::Could not push data after 3 attempts"
-          exit 1
+      - name: Save data cache
+        if: ${{ !cancelled() }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            docs/data/history.json
+            docs/data/latest.json
+          key: stock-data-${{ github.run_id }}
 
       - name: Open or update alert issues
         if: steps.check.outputs.notify_count != '0' && steps.check.outputs.notify_count != ''
@@ -107,3 +120,47 @@ jobs:
                 core.info(`Opened #${data.number}: ${a.title}`);
               }
             }
+
+      # Only the small anti-spam state is committed, and only when it changes
+      # (i.e. right after an alert), so alerts aren't repeated across runs.
+      - name: Commit alert state
+        if: ${{ !cancelled() && steps.check.outcome == 'success' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data/alert_state.json
+          if git diff --cached --quiet; then
+            echo "Alert state unchanged."
+            exit 0
+          fi
+          git commit -m "Update alert state $(date -u +'%Y-%m-%d %H:%M UTC')"
+          for i in 1 2 3; do
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push && exit 0
+            sleep $((i * 5))
+          done
+          echo "::error::Could not push alert state after 3 attempts"
+          exit 1
+
+      - name: Upload Pages artifact
+        id: upload
+        if: ${{ !cancelled() }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  # Separate job so a Pages problem can never block alerts.
+  deploy:
+    needs: check
+    if: ${{ !cancelled() && needs.check.outputs.uploaded == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

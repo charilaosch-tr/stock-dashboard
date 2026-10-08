@@ -2,7 +2,16 @@
 
 Watches a list of stocks every 5 minutes during US market hours. When a stock
 moves more than its threshold vs. the previous close, it opens a GitHub issue
-so you get notified. A small dashboard on GitHub Pages shows every stock.
+so you get notified. A dashboard on GitHub Pages shows:
+
+- **Market overview**: S&P 500, Nasdaq Composite, Dow Jones, Russell 2000, VIX, market state
+- **Watchlist** cards: price, move, threshold, intraday chart, 52-week range position,
+  volume vs. 3-month average, market cap
+- **Top 20 by volume**: most actively traded US stocks today (Yahoo "most actives")
+- **Top 20 movers**: biggest % moves today among US stocks with market cap ≥ $2B and
+  price ≥ $5, with All / Gainers / Losers toggle
+
+Tables are sortable (click a column header) and tickers link to Yahoo Finance.
 
 Runs entirely on GitHub Actions + GitHub Pages. No servers, no API keys, no
 secrets (it only uses the built-in `GITHUB_TOKEN`).
@@ -13,10 +22,10 @@ scripts/check_stocks.py           <- fetches prices, finds moves over threshold 
 .github/workflows/stock-check.yml <- runs every 5 min, commits data, opens/comments on issues
 docs/                             <- dashboard (served by GitHub Pages)
   index.html, app.js, style.css
-  data/latest.json                <- latest snapshot (written by the script)
-  data/history.json               <- rolling intraday prices (last 400 points per ticker)
-  data/alerts.json                <- stocks over threshold on the last run
-  data/alert_state.json           <- what was already notified today (prevents spam)
+  data/alert_state.json           <- what was already notified today (committed; prevents spam)
+  data/*.json (generated)         <- latest, history, alerts, market, actives, movers:
+                                     built each run, deployed with the Pages artifact,
+                                     history kept in the Actions cache (not committed)
 ```
 
 ## Setup (one time)
@@ -24,8 +33,9 @@ docs/                             <- dashboard (served by GitHub Pages)
 1. Push this folder to a new GitHub repository (branch `main`).
 2. **Actions permissions:** Settings → Actions → General → Workflow permissions →
    pick **Read and write permissions** (lets the workflow commit data and open issues).
-3. **Pages:** Settings → Pages → Build and deployment → Source: **Deploy from a branch**,
-   Branch: **`main`**, folder **`/docs`** → Save. Your dashboard will be at
+3. **Pages:** Settings → Pages → Build and deployment → Source: **GitHub Actions**.
+   The workflow uploads `docs/` (plus fresh data) and deploys it every run, which avoids
+   the ~10 builds/hour limit of branch-based Pages. Your dashboard will be at
    `https://<your-user>.github.io/<repo>/`.
 4. **Run it once now:** Actions tab → **Stock check** → **Run workflow**.
    After that it runs on its own every 5 minutes, Mon–Fri, 13:00–21:55 UTC.
