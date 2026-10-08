@@ -35,6 +35,12 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
 
+      # Queued runs (concurrency) check out the commit from trigger time; pull
+      # the newest main so we see alert_state.json written by the previous run
+      # and don't re-alert the same move.
+      - name: Sync to latest main
+        run: git pull --ff-only origin "${GITHUB_REF_NAME}" || echo "::warning::could not fast-forward; using checked-out commit"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -129,14 +135,44 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/data/alert_state.json
-          if git diff --cached --quiet; then
+          STATE=docs/data/alert_state.json
+          if git diff --quiet -- "$STATE"; then
             echo "Alert state unchanged."
             exit 0
           fi
-          git commit -m "Update alert state $(date -u +'%Y-%m-%d %H:%M UTC')"
+          cp "$STATE" /tmp/ours.json
           for i in 1 2 3; do
-            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push && exit 0
+            # Start from the newest main and merge per ticker (newest notified_at
+            # wins), so concurrent/queued runs never conflict.
+            git fetch -q origin "${GITHUB_REF_NAME}"
+            git checkout -q -- "$STATE" 2>/dev/null || true
+            git reset -q --hard "origin/${GITHUB_REF_NAME}"
+            python3 - "$STATE" /tmp/ours.json <<'PY'
+          import json, sys
+          path, ours_path = sys.argv[1], sys.argv[2]
+          def load(p):
+              try:
+                  with open(p) as f:
+                      return json.load(f)
+              except Exception:
+                  return {}
+          theirs, ours = load(path), load(ours_path)
+          merged = dict(theirs)
+          for t, v in ours.items():
+              cur = merged.get(t)
+              if not cur or str(v.get("notified_at", "")) >= str(cur.get("notified_at", "")):
+                  merged[t] = v
+          with open(path, "w") as f:
+              json.dump(merged, f, indent=2)
+              f.write("\n")
+          PY
+            git add "$STATE"
+            if git diff --cached --quiet; then
+              echo "Alert state already up to date on main."
+              exit 0
+            fi
+            git commit -q -m "Update alert state $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push -q origin "HEAD:${GITHUB_REF_NAME}" && { echo "Pushed alert state."; exit 0; }
             sleep $((i * 5))
           done
           echo "::error::Could not push alert state after 3 attempts"
